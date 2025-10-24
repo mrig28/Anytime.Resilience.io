@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anytime Reset & Resilience Toolkit</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+            color: #1f2937;
+        }
+        /* Custom styles */
+        .section-title {
+            position: relative;
+            display: inline-block;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 50%;
+            height: 4px;
+            background-color: #14b8a6; /* Tailwind teal-500 */
+            border-radius: 9999px;
+        }
+        .story-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .story-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .accordion-header {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .accordion-header:hover:not(.locked) {
+            background-color: #e0f2f7; /* Light cyan */
+        }
+        .accordion-header.locked {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            border-top: 1px solid #e2e8f0;
+        }
+        .accordion-content.open {
+            max-height: 4000px; /* Increased height for full visibility */
+            transition: max-height 0.5s ease-in;
+        }
+        .completion-button {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .completion-button:active {
+            transform: scale(0.98);
+        }
+        .task-block-locked {
+            filter: grayscale(100%);
+            opacity: 0.5;
+            cursor: not-allowed;
+            user-select: none;
+            position: relative;
+            pointer-events: none; /* Disable interaction on child elements */
+        }
+        .task-block-locked::after {
+            content: '🔒 Locked - Complete Previous Step';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #ef4444;
+            white-space: nowrap;
+            border: 2px solid #ef4444;
+            pointer-events: none; /* Ensure overlay doesn't block clicks (though pointer-events: none on parent handles this) */
+        }
+        .relative-task {
+            position: relative;
+        }
+        /* Style for the Completed Status */
+        .status-completed {
+            background-color: #9ca3af; /* Gray-400 */
+            cursor: default;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <div class="container mx-auto p-4 flex justify-between items-center max-w-4xl">
+            <h1 class="text-xl font-bold text-teal-600 cursor-pointer" onclick="navigateTo('home')">
+                Anytime Reset & Resilience
+            </h1>
+            <nav>
+                <button onclick="navigateTo('home')" class="text-sm font-medium text-gray-500 hover:text-teal-600 transition duration-150 mr-4">Home</button>
+                <!-- This button is now dynamic: it either opens the form or starts the journey -->
+                <button id="start-journey-button" onclick="handleStartJourney()" class="text-sm font-medium text-teal-600 hover:text-teal-800 transition duration-150">Start Journey</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Loading Spinner (Visible while fetching data) -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-teal-500"></div>
+            <p class="mt-4 text-teal-700 font-semibold">Loading Resilience Journey...</p>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="container mx-auto p-4 md:p-8 max-w-4xl">
+        
+        <!-- Home Page View -->
+        <div id="home-view">
+            
+            <!-- Hero Section -->
+            <section class="text-center py-12 md:py-20 bg-white rounded-xl shadow-lg mb-12 relative overflow-hidden">
+                <!-- Image for Hero Section -->
+                <img 
+                    src="https://placehold.co/800x250/2dd4c2/ffffff?text=Cultivating+Inner+Calm" 
+                    onerror="this.onerror=null;this.src='https://placehold.co/800x250/2dd4c2/ffffff?text=Cultivating+Inner+Calm'"
+                    alt="Abstract image representing peace and inner calm"
+                    class="w-full h-40 md:h-64 object-cover mb-6 rounded-t-xl"
+                >
+                <div class="p-4">
+                    <h2 class="text-4xl md:text-6xl font-extrabold text-gray-900 mb-4">
+                        The Silent Epidemic
+                    </h2>
+                    <h3 class="text-xl md:text-2xl text-teal-600 font-semibold mb-6">
+                        Cultivate Calm, Clarity, and Resilience.
+                    </h3>
+                    <p class="text-gray-600 max-w-2xl mx-auto mb-8">
+                        Stress is the universal challenge of our modern world. Our <b>Anytime Reset & Resilience Toolkit</b> provides simple, science-backed habits to help you navigate stress in any situation and reclaim your well-being.
+                    </p>
+                    <button onclick="handleStartJourney()" class="inline-block bg-teal-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-teal-700 transition duration-300 transform hover:scale-105">
+                        Start Your 7-Day Journey Today
+                    </button>
+                    <p id="user-greeting" class="mt-4 text-xl font-semibold text-gray-700 hidden"></p>
+                </div>
+            </section>
+
+            <!-- Who Needs the Reset Toolkit? -->
+            <section class="my-12 md:my-16">
+                <h2 class="text-3xl font-bold mb-8 section-title text-gray-800">Who Needs the Reset Toolkit?</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Card 1: Students -->
+                    <div class="bg-teal-50 p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                        <img 
+                            src="https://placehold.co/300x150/f0f9ff/0e7490?text=Students+Studying" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/300x150/f0f9ff/0e7490?text=Students+Studying'"
+                            alt="Student looking stressed over textbooks"
+                            class="w-full h-24 object-cover rounded-lg mb-4"
+                        >
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">
+                            Students
+                        </h3>
+                        <p class="text-gray-600 text-sm">
+                            <b>Problem:</b> Exam anxiety, overwhelming coursework, and pressure to perform.
+                            <br><b>Usefulness:</b> Learn powerful breathing techniques to calm nerves before tests and improve focus for studying.
+                        </p>
+                    </div>
+                    
+                    <!-- Card 2: Professionals -->
+                    <div class="bg-teal-50 p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                         <img 
+                            src="https://placehold.co/300x150/f0f9ff/0e7490?text=Professional+Working" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/300x150/f0f9ff/0e7490?text=Professional+Working'"
+                            alt="Busy professional at a desk with two monitors"
+                            class="w-full h-24 object-cover rounded-lg mb-4"
+                        >
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">
+                            Professionals
+                        </h3>
+                        <p class="text-gray-600 text-sm">
+                            <b>Problem:</b> Tight deadlines, demanding workloads, and difficulty finding work-life balance.
+                            <br><b>Usefulness:</b> Implement micro-resets and boundaries to prevent burnout and maintain steady energy throughout the workday.
+                        </p>
+                    </div>
+
+                    <!-- Card 3: Parents -->
+                    <div class="bg-teal-50 p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                         <img 
+                            src="https://placehold.co/300x150/f0f9ff/0e7490?text=Parent+with+Child" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/300x150/f0f9ff/0e7490?text=Parent+with+Child'"
+                            alt="Tired parent cuddling a child"
+                            class="w-full h-24 object-cover rounded-lg mb-4"
+                        >
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">
+                            Parents
+                        </h3>
+                        <p class="text-gray-600 text-sm">
+                            <b>Problem:</b> Juggling childcare, household responsibilities, and financial strain leading to lack of sleep.
+                            <br><b>Usefulness:</b> Discover quick movement breaks and effective evening routines to release tension and improve sleep quality despite a busy schedule.
+                        </p>
+                    </div>
+
+                    <!-- Card 4: Anyone Seeking Calm -->
+                    <div class="bg-teal-50 p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                         <img 
+                            src="https://placehold.co/300x150/f0f9ff/0e7490?text=Person+Meditating" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/300x150/f0f9ff/0e7490?text=Person+Meditating'"
+                            alt="A serene person meditating outdoors"
+                            class="w-full h-24 object-cover rounded-lg mb-4"
+                        >
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">
+                            Anyone Seeking Calm
+                        </h3>
+                        <p class="text-gray-600 text-sm">
+                            <b>Problem:</b> General anxiety, social comparison, and difficulty focusing on the present.
+                            <br><b>Usefulness:</b> The toolkit offers universal habits like gratitude journaling and mindful walking to rewire the brain for optimism and lasting resilience.
+                        </p>
+                    </div>
+
+                </div>
+            </section>
+
+
+            <!-- Real-Life Stories Section -->
+            <section class="my-12 md:my-16">
+                <h2 class="text-3xl font-bold mb-8 section-title text-gray-800">Real-Life Stories: Finding Calm</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- Story 1: Alex (Mindful Breathing) -->
+                    <div class="story-card bg-white p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                         <img 
+                            src="https://placehold.co/100x100/ecfdf5/065f46?text=Focus" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/100x100/ecfdf5/065f46?text=Focus'"
+                            alt="A person focusing intensely"
+                            class="w-12 h-12 object-cover rounded-full mb-4 mx-auto"
+                        >
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Alex: Overcoming Deadlines</h3>
+                        <p class="text-gray-500 italic mb-3 text-sm">Mindful Breathing</p>
+                        <p class="text-gray-600">Before: Overwhelmed by work deadlines. After: Incorporating mindful breathing, he feels more <b>focused</b> and significantly less <b>anxious</b>.</p>
+                    </div>
+
+                    <!-- Story 2: Sophia (Gratitude Journaling) -->
+                    <div class="story-card bg-white p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                        <img 
+                            src="https://placehold.co/100x100/ecfdf5/065f46?text=Confidence" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/100x100/ecfdf5/065f46?text=Confidence'"
+                            alt="A confident person smiling"
+                            class="w-12 h-12 object-cover rounded-full mb-4 mx-auto"
+                        >
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Sophia: Building Confidence</h3>
+                        <p class="text-gray-500 italic mb-3 text-sm">Gratitude Journaling</p>
+                        <p class="text-gray-600">Before: Struggling with social anxiety. After: Practicing gratitude journaling, she has increased her <b>self-esteem</b> and is more <b>confident</b>.</p>
+                    </div>
+
+                    <!-- Story 3: Maria (Movement Breaks) -->
+                    <div class="story-card bg-white p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                        <img 
+                            src="https://placehold.co/100x100/ecfdf5/065f46?text=Energy" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/100x100/ecfdf5/065f46?text=Energy'"
+                            alt="A person stretching energetically"
+                            class="w-12 h-12 object-cover rounded-full mb-4 mx-auto"
+                        >
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Maria: Balancing Family</h3>
+                        <p class="text-gray-500 italic mb-3 text-sm">Regular Movement</p>
+                        <p class="text-gray-600">Before: Exhausted from balancing work and family. After: Taking regular movement breaks, she experiences increased <b>energy</b> and reduced muscle tension.</p>
+                    </div>
+
+                    <!-- Story 4: Daniel (Evening Relaxation) -->
+                    <div class="story-card bg-white p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                         <img 
+                            src="https://placehold.co/100x100/ecfdf5/065f46?text=Sleep" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/100x100/ecfdf5/065f46?text=Sleep'"
+                            alt="A serene image of a sleeping person"
+                            class="w-12 h-12 object-cover rounded-full mb-4 mx-auto"
+                        >
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Daniel: Beating Insomnia</h3>
+                        <p class="text-gray-500 italic mb-3 text-sm">Evening Routine</p>
+                        <p class="text-gray-600">Before: Suffering from insomnia. After: Using an evening relaxation routine, he now falls asleep <b>easier</b> and sleeps more <b>soundly</b>.</p>
+                    </div>
+
+                    <!-- Story 5: Li Wei (Focus on Present) -->
+                    <div class="story-card bg-white p-6 rounded-xl shadow-md border-t-4 border-teal-500">
+                         <img 
+                            src="https://placehold.co/100x100/ecfdf5/065f46?text=Clarity" 
+                            onerror="this.onerror=null;this.src='https://placehold.co/100x100/ecfdf5/065f46?text=Clarity'"
+                            alt="A clear, calm landscape"
+                            class="w-12 h-12 object-cover rounded-full mb-4 mx-auto"
+                        >
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Li Wei: Reducing Worry</h3>
+                        <p class="text-gray-500 italic mb-3 text-sm">Present Moment Focus</p>
+                        <p class="text-gray-600">Before: Constant worrying about the future. After: Actively focusing on the present, improving her relationship with her family and increasing <b>clarity</b>.</p>
+                    </div>
+                </div>
+            </section>
+            
+             <!-- Key Takeaway -->
+            <section class="my-12 md:my-16 text-center bg-teal-600 p-8 rounded-xl text-white shadow-xl">
+                <h2 class="text-2xl md:text-3xl font-extrabold mb-4">Key Takeaway</h2>
+                <p class="text-teal-100 max-w-2xl mx-auto">
+                    Stress is a universal challenge, but so are the solutions. By incorporating these habits, you can cultivate greater calm, clarity, and long-term resilience.
+                </p>
+            </section>
+        </div>
+
+        <!-- Registration Form View -->
+        <div id="register-view" class="hidden">
+            <section class="my-12 md:my-16 bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-lg mx-auto">
+                <h2 class="text-3xl font-bold mb-4 text-gray-800 text-center">Start Your Personalized Journey</h2>
+                <p class="text-gray-600 mb-8 text-center">Please fill in these details to personalize your resilience program.</p>
+
+                <div class="space-y-6">
+                    <div>
+                        <label for="user-name" class="block text-sm font-medium text-gray-700">Your Full Name:</label>
+                        <input type="text" id="user-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" placeholder="e.g., Alex Johnson">
+                    </div>
+                    <div>
+                        <label for="user-age" class="block text-sm font-medium text-gray-700">Your Age:</label>
+                        <input type="number" id="user-age" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" placeholder="e.g., 35">
+                    </div>
+                    <div>
+                        <label for="user-location" class="block text-sm font-medium text-gray-700">Your Location (City/Country):</label>
+                        <input type="text" id="user-location" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" placeholder="e.g., New York, USA">
+                    </div>
+
+                    <button onclick="saveUserProfile()" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-teal-700 transition duration-300 transform hover:scale-[1.01]">
+                        Save Profile & Start Journey!
+                    </button>
+                    <p id="register-error" class="text-red-500 text-center text-sm hidden">Please fill in all fields (Name, Age, and Location).</p>
+                </div>
+            </section>
+        </div>
+
+
+        <!-- Journey Page View (Accordion Layout) -->
+        <div id="journey-view" class="hidden">
+            <section class="my-12 md:my-16 bg-white p-4 md:p-8 rounded-xl shadow-2xl">
+                <h2 class="text-3xl font-bold mb-4 section-title text-gray-800"><span id="journey-greeting"></span>, Your 7-Day Resilience Journey!</h2>
+                <p class="text-gray-600 mb-8">Follow your daily guide below. Complete each <b>Task</b> and <b>Reward</b> sequentially to complete the day.</p>
+
+                <!-- Accordion Container -->
+                <div id="accordion-container" class="space-y-4">
+                    <!-- Days will be generated by JS -->
+                </div>
+                
+                <div id="completion-message" class="hidden text-center mt-12 p-8 bg-green-50 border-4 border-green-300 rounded-xl">
+                    <p class="text-4xl mb-4">🏆</p>
+                    <h3 class="text-2xl font-bold text-green-700">Congratulations, <span id="final-name-placeholder"></span>!</h3>
+                    <p class="text-lg text-gray-600 mt-3">You have successfully completed the entire 7-day journey to calm and resilience. Keep building these habits!</p>
+                    
+                    <!-- New Restart Option -->
+                    <div id="restart-options" class="mt-6 pt-4 border-t border-green-200">
+                        <p class="text-xl font-semibold text-gray-700 mb-4">Would you like to start the 7-day journey again?</p>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="startNewJourney()" class="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition duration-300">
+                                Yes, Start Again
+                            </button>
+                            <button onclick="keepCompleted()" class="bg-gray-400 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-500 transition duration-300">
+                                No, Keep Completed Status
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-6 text-center text-sm">
+        &copy; 2025 Anytime Reset & Resilience Toolkit. Designed for well-being.
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- Global Firebase & State Variables ---
+        let db, auth, userId;
+        let completedDay = 0; 
+        let currentDayProgress = {}; 
+        let isAuthReady = false;
+        let openDay = 0; 
+        let userNotes = {}; 
+        let userName = null;
+        let userProfile = { name: null, age: null, location: null };
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const homeView = document.getElementById('home-view');
+        const journeyView = document.getElementById('journey-view');
+        const registerView = document.getElementById('register-view');
+        const accordionContainer = document.getElementById('accordion-container');
+        
+        let currentPage = 'home';
+        
+        // --- Data Definitions (Updated for bolding and no '*') ---
+        const plans = [
+            { day: 1, title: "Awareness Switch", intro: "Slow your nervous system and cultivate a calm, present state.", 
+                morning: { title: "Morning (5 min) - 4-4-6 Breathing", 
+                    details: "Sit comfortably (chair/bed), back straight, shoulders relaxed.<br>Hand on chest, hand on stomach.<br>Inhale through nose for 4 seconds (feel stomach rise).<br>Hold for 4 seconds.<br>Exhale through mouth for 6 seconds (like blowing through a straw).<br>Repeat 6x (about 4 min).<br>★ Notice: heartbeat slows, shoulders relax, thoughts calm.<br><b>Why:</b> Slows nervous system, reduces stress, tells brain 'I am safe.'", 
+                    rewardDetails: "Eat a piece of fruit mindfully, savoring each bite.<br><b>Reason:</b> Calm + sweet reward = enjoyable reset.", 
+                    icon: "☀️", taskKey: 'morning' 
+                }, 
+                midday: { title: "Midday (2 min) - Quick Micro Reset", 
+                    details: "Pause. Ask: 'What's draining me?' (screen, noise, hunger?)<br>Choose one: <b>Drink water</b>,<br><b>Stretch & deep breaths</b>, or <b>Close eyes & breathe 3x</b>.<br>★ Notice: stress drops, focus sharpens.<br><b>Why:</b> Short resets prevent stress build-up, keep energy steady.", 
+                    rewardDetails: "Take a smiling selfie, set as lock-screen.<br><b>Reason:</b> See your smile = reminder calm is possible anytime.", 
+                    icon: "💧", taskKey: 'midday' 
+                }, 
+                evening: { title: "Evening (5-10 min) - Night Release Note", 
+                    details: "Write <b>1 positive thing</b> from today (small is fine).<br>Write <b>1 thing to release</b> ('I release worry about...')<br>Keep it short (1-2 sentences).<br>★ Notice: mind feels lighter.<br><b>Why:</b> Releasing on paper frees your brain before sleep.", 
+                    rewardDetails: "Play a calming song in a dark room for 2 min.<br><b>Reason:</b> Music + journaling = closure, helps brain relax.", 
+                    icon: "📝", taskKey: 'evening' 
+                } 
+            },
+            { day: 2, title: "Move to Reset", intro: "Open the muscles where stress hides and boost your natural energy.", 
+                morning: { title: "Morning (7 min) - Stretch Routine", 
+                    details: "<b>Neck rolls:</b> Drop chin to chest, roll head gently in a circle (30 sec each side).<br><b>Shoulder opener:</b> Roll shoulders backward slowly 5x, then forward 5x.<br><b>Back bend:</b> Stand, hands on hips, lean back slightly, hold 10 sec x 2.<br><b>Hamstring stretch:</b> One leg forward, bend to touch shin/ankle, hold 20 sec each side.<br><b>Ankle circles:</b> Lift foot, rotate ankle 10x each direction.<br>★ Notice: Warmth in muscles, energy rising.<br><b>Why:</b> Movement opens muscles where stress hides, boosts blood flow = natural energy.", 
+                    rewardDetails: "Make tea/coffee/cocoa in your favorite mug, sip slowly while standing tall.<br><b>Reason:</b> Comfort anchors movement = pleasure.", 
+                    icon: "🧘", taskKey: 'morning' 
+                }, 
+                midday: { title: "Midday (3 min) - Posture Reset", 
+                    details: "Sit <b>straight</b>, feet <b>flat</b>, spine <b>tall</b>.<br>Drop shoulders away from ears.<br>Hands on thighs.<br>Take 3 slow breaths, exhale fully.<br>★ Notice: Instant release of tension in back/chest.<br><b>Why:</b> Good posture reduces tension, increases oxygen.", 
+                    rewardDetails: "Change phone/laptop wallpaper to a motivational quote/picture.<br><b>Reason:</b> Visual reminders = micro-boosters.", 
+                    icon: "🤸", taskKey: 'midday' 
+                }, 
+                evening: { title: "Evening (5-10 min) - Focus Reflection", 
+                    details: "Write <b>one moment your focus broke</b> (e.g., 'Scrolled phone while working').<br>Write <b>what helped you reset</b> (e.g., 'Closed phone, drank water').<br>★ Notice: Building awareness of triggers.<br><b>Why:</b> Awareness of triggers builds resilience for tomorrow.", 
+                    rewardDetails: "Light a small candle/lamp while reflecting.<br><b>Reason:</b> Firelight signals brain: 'Time to slow down, stress off.'", 
+                    icon: "💡", taskKey: 'evening' 
+                } 
+            },
+            { day: 3, title: "Sense and Gratitude", intro: "Anchor yourself in the present moment and rewire your brain for optimism.", 
+                morning: { title: "Morning (5 min) - Sensory Awareness", 
+                    details: "Sit comfortably where you are.<br>Write down <b>3 things you notice with your senses</b> right now.<br>• Sight: 'I see sunlight on the wall.'<br>• Sound: 'I hear a bird chirping.'<br>• Touch: 'I feel my chair under me.'<br>★ Notice: You feel more present, less stuck in your thoughts.<br><b>Why:</b> Focusing on your senses anchors you in the present moment, breaking the cycle of rumination.", 
+                    rewardDetails: "Enjoy a small piece of chocolate (or your favorite snack).<br><b>Reason:</b> The sweet taste becomes your 'anchor' to present-moment awareness. Enjoy the sensation!", 
+                    icon: "🍫", taskKey: 'morning' 
+                }, 
+                midday: { title: "Midday (2 min) - Reframe Comparison", 
+                    details: "When you find yourself comparing yourself to others, <b>pause</b>.<br>Write down: 'My progress is compared only to yesterday's me.'<br>Say it aloud once.<br>★ Notice: A small relief in your chest, a calmer thought.<br><b>Why:</b> Reframing stops the stress loop of constant comparison.", 
+                    rewardDetails: "Share your positive line on your Instagram story with your favorite song.<br><b>Reason:</b> External sharing = accountability + dopamine from social interaction.", 
+                    icon: "🗣️", taskKey: 'midday' 
+                }, 
+                evening: { title: "Evening (5 min) - Gratitude 3x", 
+                    details: "Grab your notebook or phone.<br>Write down <b>3 things you are grateful for</b> today (keep them small and simple).<br>Read them before going to sleep.<br>★ Notice: A peaceful feeling replacing worry.<br><b>Why:</b> Gratitude rewires your brain chemistry for optimism and positivity.", 
+                    rewardDetails: "Enjoy 10 minutes of guilt-free scrolling (Pinterest, YouTube, memes).<br><b>Reason:</b> Fun activity becomes earned, not guilty = a self-reward loop for a positive ending to the day.", 
+                    icon: "🌟", taskKey: 'evening' 
+                } 
+            },
+            { day: 4, title: "Boundaries Build Strength", intro: "Protect your energy and prevent burnout by setting small, effective rules.", 
+                morning: { title: "Morning (2 min) - Pick a Boundary", 
+                    details: "Decide on <b>one small rule</b> for yourself today (e.g., 'No phone at meals,' 'No emails after 8 PM').<br>Write it on paper or a sticky note.<br>★ Notice: You feel in control already! +<br><b>Why:</b> Boundaries protect your energy and prevent burnout.", 
+                    rewardDetails: "Write your boundary on a sticky note and stick it on your desk or fridge.<br><b>Reason:</b> Seeing your boundary is a mini-victory badge.", 
+                    icon: "🚧", taskKey: 'morning' 
+                }, 
+                midday: { title: "Midday (5 min) - Practice Boundary", 
+                    details: "During a meal or break, <b>keep your phone aside</b>.<br>Eat slowly, noticing the taste, smell, and texture.<br>If the urge to grab your phone comes, remind yourself: 'This is my boundary for calm.'<br>★ Notice: Food feels richer, stress reduced.<br><b>Why:</b> Disconnection builds focus.", 
+                    rewardDetails: "Give yourself a treat (slice of fruit cake, smoothie, snack).<br><b>Reason:</b> Associating the boundary with pleasure makes you want to repeat it.", 
+                    icon: "🍽️", taskKey: 'midday' 
+                }, 
+                evening: { title: "Evening (5 min) - Reflection", 
+                    details: "Write: 'The boundary helped me feel...'<br>Write if you slipped—<b>no judgment, just note it</b>.<br>★ Notice: Next day will be easier.<br><b>Why:</b> Evaluating = stronger habit next time.", 
+                    rewardDetails: "Add one small item to your 'self-gift wishlist.' (book, plant, mug, etc.)<br><b>Reason:</b> Anticipation of a reward = strong long-term motivation.", 
+                    icon: "🎁", taskKey: 'evening' 
+                } 
+            },
+            { day: 5, title: "Mindful Walk", intro: "Reduce cortisol (stress hormone) and ground yourself using your senses while moving.", 
+                morning: { title: "Morning (2 min) - Set Intention", 
+                    details: "Say aloud or write: 'Today I will notice beauty around me.'<br>★ Notice: Your brain starts searching for calm moments.<br><b>Why:</b> Pre-commitment primes your brain to spot calm.", 
+                    rewardDetails: "Set a flower or sky photo as wallpaper.<br><b>Reason:</b> Anchors day to beauty.", 
+                    icon: "🌸", taskKey: 'morning' 
+                }, 
+                midday: { title: "Day (10 min) - Mindful Walk (5-4-3-2-1)", 
+                    details: "Walk <b>slowly</b>, phone in pocket.<br>Observe:<br>• <b>5 things you see</b> (colors, shapes).<br>• <b>4 things you hear</b> (birds, cars, footsteps).<br>• <b>3 things you feel</b> (air, clothes, steps).<br>• <b>2 things you smell</b>.<br>• <b>1 thing you taste</b> (if chewing gum/drink water).<br>★ Notice: Your brain feels grounded, calm.<br><b>Why:</b> Walking reduces cortisol (stress hormone).", 
+                    rewardDetails: "Take one photo of something calming. Post in your story or save in a 'Calm Album.'<br><b>Reason:</b> You create your own digital calm library.", 
+                    icon: "🚶", taskKey: 'midday' 
+                }, 
+                evening: { title: "Evening (5 min) - Joy Note", 
+                    details: "Write <b>one moment you enjoyed most</b> today.<br>Even if small, write it clearly (e.g., 'Smile from a stranger,' 'Fresh air').<br>★ Notice: Your mood lifts when remembering.<br><b>Why:</b> Ends day on positivity.", 
+                    rewardDetails: "Watch a short comedy clip or funny skit.<br><b>Reason:</b> Laughter = instant stress release.", 
+                    icon: "😂", taskKey: 'evening' 
+                } 
+            },
+            { day: 6, title: "Release Through Relaxation", intro: "Set the stage for deep, restful sleep through physical and mental release.", 
+                morning: null, 
+                midday: null, 
+                evening: { title: "Evening (10 min) - Progressive Muscle Relaxation (PMR)", 
+                    details: "Lie down on bed or sit back in a chair.<br>Start with feet: <b>tense muscles for 5 sec, then release</b>.<br>Move upward: calves, thighs, hips, stomach, chest, arms, shoulders, neck, face.<br>After each release, breathe out <b>fully</b>.<br>★ Notice: body feels heavy, calm.<br><b>Why:</b> Relaxes body + signals brain 'safe to rest.'", 
+                    rewardDetails: "Spray/apply a calming scent (lavender, sandalwood, or body mist).<br><b>Reason:</b> Scent becomes linked with relaxation.", 
+                    icon: "😌", taskKey: 'evening' 
+                }, 
+                evening_reflection: { 
+                    title: "Evening (5 min) - Reflection",
+                    details: "Write: 'Today I am letting go of...'<br>Could be small or big (worry, anger, regret).<br>★ Notice: brain feels free before bed.<br><b>Why:</b> Release = lighter sleep.",
+                    rewardDetails: "Read 2 pages of your favorite book or comic.<br><b>Reason:</b> Mind learns: reflection = permission for joy.",
+                    icon: "✍️", taskKey: 'evening_reflection'
+                }
+            },
+            { day: 7, title: "Integration & Celebration", intro: "Integrate your new habits and celebrate your progress to lock in long-term practice.", 
+                morning: { title: "Morning (5 min) - Gratitude + Breath", 
+                    details: "Write <b>3 gratitudes</b>.<br>Do <b>2 minutes of slow breathing</b>.<br>★ Notice: balanced start to the day.<br><b>Why:</b> Anchor your week in calm.", 
+                    rewardDetails: "Special breakfast treat (croissant, smoothie, pancakes).<br><b>Reason:</b> Sunday-style reward celebratory mood.", 
+                    icon: "🥳", taskKey: 'morning' 
+                }, 
+                midday: { title: "Day (10 min) - Repeat Your Favorite Reset", 
+                    details: "Choose from the week (breting, walking, stretching, journaling).<br>Do it <b>fully, enjoy</b>.<br>★ Notice: it feels easier now.<br><b>Why:</b> Personal choice = higher consistency.", 
+                    rewardDetails: "Make a <b>3-song playlist of your wins</b>. Play & dance/listen.<br><b>Reason:</b> Celebration ritual = positive anchor.", 
+                    icon: "🔁", taskKey: 'midday' 
+                }, 
+                evening: { title: "Evening (20 min) - Weekly Review & Next Steps", 
+                    details: "Look back at <b>Day 1 stress, sleep, energy</b>.<br>Compare to today's levels.<br>Write: <b>3 lessons</b>, <b>1 habit to continue</b>.<br>★ Notice: you have proof of growth.<br><b>Why:</b> Reflection turns one week into long-term practice.", 
+                    rewardDetails: "Completion gift: <b>Buy something from your wishlist</b>, OR<br>print/frame your favorite photo/wallpaper with 'Week 1 Resilience Winner.'<br><b>Reason:</b> Tangible celebration locks habit in brain.", 
+                    icon: "🏆", taskKey: 'evening' 
+                } 
+            }
+        ];
+        
+        // --- Firebase Functions ---
+
+        // Helper function to get the key for the active day's progress data in Firestore
+        function getCurrentDayProgressKey() {
+             return `day${completedDay + 1}`;
+        }
+        
+        // Helper function to define the progress structure for any given day
+        function getDefaultProgressStructure() {
+            return { 
+                morning_task: false, morning_reward: false, 
+                midday_task: false, midday_reward: false, 
+                evening_task: false, evening_reward: false,
+                evening_reflection_task: false, evening_reflection_reward: false
+            };
+        }
+
+        // --- NEW: Initializes local currentDayProgress for the currently active day ---
+        async function initializeCurrentDayProgress(forceReload = false) {
+            const userDocRef = getUserDocRef();
+            if (!userDocRef) return;
+            
+            const activeDayKey = getCurrentDayProgressKey();
+            
+            if (forceReload || !currentDayProgress || Object.keys(currentDayProgress).length === 0) {
+                 try {
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists() && docSnap.data()[activeDayKey]) {
+                        currentDayProgress = { ...getDefaultProgressStructure(), ...docSnap.data()[activeDayKey] };
+                    } else {
+                        // Use default structure if no server data exists for the current day
+                        currentDayProgress = getDefaultProgressStructure();
+                    }
+                } catch (error) {
+                    console.error("Failed to load current day progress from server:", error);
+                    currentDayProgress = getDefaultProgressStructure();
+                }
+            }
+        }
+        // --- END NEW FUNCTION ---
+
+        async function initializeFirebase() {
+            setLogLevel('debug');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            
+            try {
+                if (Object.keys(firebaseConfig).length === 0) {
+                    console.error("Firebase config is empty. Cannot initialize. Showing default home view.");
+                    navigateTo(currentPage);
+                    return; 
+                }
+                
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authenticate
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                isAuthReady = true;
+
+                // Load Data and render UI (must be successful to proceed)
+                await loadUserData(); 
+
+            } catch (error) {
+                console.error("Top-level Firebase initialization failed:", error);
+                // Fallback to show an error and the home page
+                showCompletionToast('Error', 0, 'Initial load failed. Check console for details.');
+                navigateTo('home');
+                
+            } finally {
+                // IMPORTANT: Ensure overlay is always hidden after setup attempts
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        function getUserDocRef() {
+            if (!userId) {
+                console.error("User ID not available.");
+                return null;
+            }
+            // Private data path: /artifacts/{appId}/users/{userId}/{collectionName}/{documentId}
+            return doc(db, `artifacts/${appId}/users/${userId}/progress`, 'resilience-tracker');
+        }
+
+        function getUserProfileRef() {
+            if (!userId) {
+                console.error("User ID not available.");
+                return null;
+            }
+            // Private data path: /artifacts/{appId}/users/{userId}/{collectionName}/{documentId}
+            return doc(db, `artifacts/${appId}/users/${userId}/profile`, 'user-profile');
+        }
+
+        async function loadUserData() {
+            const userDocRef = getUserDocRef();
+            const profileDocRef = getUserProfileRef();
+
+            if (!userDocRef || !profileDocRef) return;
+
+            try {
+                // 1. Load Profile Data first
+                const profileSnap = await getDoc(profileDocRef);
+                if (profileSnap.exists()) {
+                    userProfile = profileSnap.data();
+                    userName = userProfile.name;
+                    updateGreetingMessage(); // Show greeting on home view
+                } else {
+                    // Profile does not exist, userName remains null, forcing registration view first
+                }
+
+                // 2. Load Journey Progress
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    completedDay = data.completedDay || 0;
+                    userNotes = data.notes || {};
+                } else {
+                    // Initialize default progress if document doesn't exist
+                    await setDoc(userDocRef, { completedDay: 0, notes: {} }, { merge: true });
+                }
+                
+                // 3. Initialize currentDayProgress based on loaded completedDay
+                await initializeCurrentDayProgress(true); // Force reload with server data
+                
+                openDay = completedDay + 1 <= 7 ? completedDay + 1 : 7;
+                renderAccordion();
+                navigateTo(currentPage);
+
+            } catch (error) {
+                console.error("Error loading or creating user data in Firestore:", error);
+                throw error;
+            }
+        }
+
+        // --- New Restart Functions ---
+        window.startNewJourney = async function() {
+            const userDocRef = getUserDocRef();
+            if (!userDocRef || !userName) return;
+
+            try {
+                // Reset progress fields in Firestore
+                // We overwrite the document to ensure all old day data is gone, starting fresh for all 7 days.
+                await setDoc(userDocRef, { 
+                    completedDay: 0, 
+                    notes: {} // Clear notes for a fresh start
+                });
+                
+                // Reset local state
+                completedDay = 0;
+                userNotes = {};
+                
+                // Initialize current day progress for Day 1
+                await initializeCurrentDayProgress(true);
+                
+                openDay = 1;
+
+                showCompletionToast('Success', 0, `Welcome back, ${userName}! Starting Day 1 again.`);
+                
+                // Navigate and render
+                renderAccordion();
+                navigateTo('journey');
+
+            } catch (error) {
+                console.error("Error restarting journey:", error);
+                showCompletionToast('Error', 0, 'Failed to restart the journey. Please try again.');
+            }
+        }
+
+        window.keepCompleted = function() {
+            // Simply hide the button panel, keeping the main congratulatory message visible
+            const buttonPanel = document.getElementById('restart-options');
+            if(buttonPanel) buttonPanel.classList.add('hidden');
+            showCompletionToast('Success', 0, 'Great! Your completed journey remains saved.');
+        }
+        // --- End New Restart Functions ---
+
+        window.saveUserProfile = async function() {
+            const nameInput = document.getElementById('user-name').value.trim();
+            const ageInput = document.getElementById('user-age').value.trim();
+            const locationInput = document.getElementById('user-location').value.trim();
+            const errorElement = document.getElementById('register-error');
+
+            if (!nameInput || !ageInput || !locationInput) {
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            errorElement.classList.add('hidden');
+
+            const profileDocRef = getUserProfileRef();
+            if (!profileDocRef) {
+                showCompletionToast('Error', 0, 'User authentication issue. Please try reloading.');
+                return;
+            }
+
+            try {
+                const newProfile = {
+                    name: nameInput,
+                    age: parseInt(ageInput, 10),
+                    location: locationInput
+                };
+                
+                await setDoc(profileDocRef, newProfile, { merge: true });
+
+                userProfile = newProfile;
+                userName = newProfile.name;
+                updateGreetingMessage();
+
+                showCompletionToast('Success', 0, `Profile Saved! ${userName}, start your journey now.`);
+                navigateTo('journey');
+
+            } catch (error) {
+                console.error("Error saving user profile:", error);
+                showCompletionToast('Error', 0, 'Failed to save profile. Please try again.');
+            }
+        }
+
+        function updateGreetingMessage() {
+            const greetingElement = document.getElementById('user-greeting');
+            const journeyGreetingElement = document.getElementById('journey-greeting');
+            
+            if (userName) {
+                greetingElement.textContent = `Welcome back, ${userName}! Continue your resilience journey here.`;
+                greetingElement.classList.remove('hidden');
+                journeyGreetingElement.textContent = `Welcome, ${userName}`;
+            } else {
+                greetingElement.classList.add('hidden');
+                journeyGreetingElement.textContent = 'Welcome'; // Default fallback
+            }
+        }
+        
+        // --- NEW: Check and display the final completion status ---
+        function checkCompletionStatus() {
+            const completionMessage = document.getElementById('completion-message');
+            const finalNamePlaceholder = document.getElementById('final-name-placeholder');
+            
+            if (completedDay === 7) {
+                finalNamePlaceholder.textContent = userName || 'Resilience Champion'; // Always set here
+                completionMessage.classList.remove('hidden');
+                return true;
+            } else {
+                completionMessage.classList.add('hidden');
+                return false;
+            }
+        }
+        // --- END NEW FUNCTION ---
+
+        window.handleStartJourney = function() {
+            if (!isAuthReady) {
+                // If auth is not ready, rely on the loading overlay being visible or wait
+                showCompletionToast('Error', 0, 'App is still loading. Please wait a moment.');
+                return;
+            }
+            if (!userName) {
+                navigateTo('register');
+            } else {
+                navigateTo('journey');
+            }
+        }
+        
+        // --- Individual Save Functions (Used for tasks with specific notes) ---
+
+        window.saveDay1EveningNotes = async function() {
+            const dayNumber = 1; const taskKey = 'evening'; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            const positiveNote = document.getElementById('day-1-positive-note').value.trim();
+            const releaseNote = document.getElementById('day-1-release-note').value.trim();
+            if (!positiveNote || !releaseNote) { showCompletionToast('Error', 0, 'Please write both a Positive Thing and a Thing to Release before completing the task.'); return; }
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                const updateNotesData = { notes: { ...userNotes, day1_positive: positiveNote, day1_release: releaseNote } };
+                await updateDoc(userDocRef, updateNotesData); userNotes = updateNotesData.notes; 
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true;
+                const activeDayKey = getCurrentDayProgressKey();
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true;
+                await updateDoc(userDocRef, updateProgressData);
+
+                showCompletionToast('Task Complete', dayNumber, `Great job, ${userName || 'Traveler'}! Evening Task Complete.`);
+                renderAccordion();
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                window.scrollTo(0, scrollY); 
+            } catch (error) { console.error("Error saving notes or completing task:", error); showCompletionToast('Error', 0, 'Failed to save notes and complete task. Please try again.'); window.scrollTo(0, scrollY); }
+        }
+        
+        window.saveDay2EveningNotes = async function() {
+            const dayNumber = 2; const taskKey = 'evening'; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            const brokeNote = document.getElementById('day-2-broke-note').value.trim();
+            const resetNote = document.getElementById('day-2-reset-note').value.trim();
+            if (!brokeNote || !resetNote) { showCompletionToast('Error', 0, 'Please fill in both reflection points.'); return; }
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                const updateNotesData = { notes: { ...userNotes, day2_broke: brokeNote, day2_reset: resetNote } };
+                await updateDoc(userDocRef, updateNotesData); userNotes = updateNotesData.notes; 
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true;
+                const activeDayKey = getCurrentDayProgressKey();
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true;
+                await updateDoc(userDocRef, updateProgressData);
+                
+                showCompletionToast('Task Complete', dayNumber, `Reflection saved, ${userName || 'Traveler'}! Reward Unlocked.`);
+                renderAccordion(); 
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                window.scrollTo(0, scrollY); 
+            } catch (error) { console.error("Error saving notes:", error); showCompletionToast('Error', 0, 'Failed to save notes. Please try again.'); window.scrollTo(0, scrollY); }
+        }
+        
+        window.saveDay3Notes = async function(taskKey) {
+            const dayNumber = 3; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            let updateNotes = { ...userNotes }; let successMessage = ''; let isComplete = false;
+            
+            // Day 3 Specific Validation and Data Extraction
+            if (taskKey === 'morning') {
+                const sight = document.getElementById('day-3-sight-note').value.trim(); const sound = document.getElementById('day-3-sound-note').value.trim(); const touch = document.getElementById('day-3-touch-note').value.trim();
+                if (!sight || !sound || !touch) { showCompletionToast('Error', 0, 'Please enter all 3 sensory observations.'); return; }
+                Object.assign(updateNotes, { day3_sight: sight, day3_sound: sound, day3_touch: touch });
+                successMessage = 'Sensory notes saved! Morning Task Complete. Reward Unlocked.'; isComplete = true;
+            } else if (taskKey === 'midday') {
+                const reframe = document.getElementById('day-3-reframe-note').value.trim();
+                if (!reframe) { showCompletionToast('Error', 0, 'Please write your reframe line.'); return; }
+                updateNotes.day3_reframe = reframe; successMessage = 'Reframe saved! Midday Task Complete. Reward Unlocked.'; isComplete = true;
+            } else if (taskKey === 'evening') {
+                const gratitude1 = document.getElementById('day-3-gratitude-1').value.trim(); const gratitude2 = document.getElementById('day-3-gratitude-2').value.trim(); const gratitude3 = document.getElementById('day-3-gratitude-3').value.trim();
+                if (!gratitude1 || !gratitude2 || !gratitude3) { showCompletionToast('Error', 0, 'Please list 3 things you are grateful for.'); return; }
+                Object.assign(updateNotes, { day3_gratitude1: gratitude1, day3_gratitude2: gratitude2, day3_gratitude3: gratitude3 });
+                successMessage = 'Gratitude notes saved! Evening Task Complete. Reward Unlocked.'; isComplete = true;
+            }
+            
+            if (!isComplete) return; 
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                await updateDoc(userDocRef, { notes: updateNotes }); userNotes = updateNotes; 
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true; 
+                const activeDayKey = getCurrentDayProgressKey(); 
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true; 
+                await updateDoc(userDocRef, updateProgressData);
+
+                showCompletionToast('Task Complete', dayNumber, `Great progress, ${userName || 'Traveler'}! Step complete.`);
+                renderAccordion(); 
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                
+                window.scrollTo(0, scrollY); 
+            } catch (error) { 
+                console.error("Error saving notes:", error); 
+                showCompletionToast('Error', 0, 'Failed to save notes. Please try again.'); 
+                window.scrollTo(0, scrollY); 
+            }
+        }
+        
+        window.saveDay4EveningNotes = async function() {
+            const dayNumber = 4; const taskKey = 'evening'; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            const feelingNote = document.getElementById('day-4-feeling-note').value.trim(); const slippedNote = document.getElementById('day-4-slipped-note').value.trim();
+            if (!feelingNote || !slippedNote) { showCompletionToast('Error', 0, "Please fill in both reflection points."); return; }
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                const updateNotesData = { notes: { ...userNotes, day4_feeling: feelingNote, day4_slipped: slippedNote } };
+                await updateDoc(userDocRef, updateNotesData); userNotes = updateNotesData.notes; 
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true; 
+                const activeDayKey = getCurrentDayProgressKey(); 
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true; 
+                await updateDoc(userDocRef, updateProgressData);
+                
+                showCompletionToast('Task Complete', dayNumber, `Reflection saved, ${userName || 'Traveler'}! Reward Unlocked.`);
+                renderAccordion(); 
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                
+                window.scrollTo(0, scrollY); 
+            } catch (error) { console.error("Error saving notes:", error); showCompletionToast('Error', 0, 'Failed to save notes. Please try again.'); window.scrollTo(0, scrollY); }
+        }
+        
+        window.saveDay5Notes = async function(taskKey) {
+            const dayNumber = 5; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            let updateNotes = { ...userNotes }; let successMessage = ''; let isComplete = false; let needsSave = false;
+
+            // Day 5 Specific Validation and Data Extraction
+            if (taskKey === 'morning') {
+                const intention = document.getElementById('day-5-intention-note').value.trim();
+                if (!intention) { showCompletionToast('Error', 0, 'Please write down your intention.'); return; }
+                updateNotes.day5_intention = intention; successMessage = 'Intention saved! Morning Task Complete. Reward Unlocked.'; isComplete = true; needsSave = true;
+            } else if (taskKey === 'evening') {
+                const joyNote = document.getElementById('day-5-joy-note').value.trim();
+                if (!joyNote) { showCompletionToast('Error', 0, 'Please write your joy note.'); return; }
+                updateNotes.day5_joy = joyNote; successMessage = 'Joy Note saved! Evening Task Complete. Reward Unlocked.'; isComplete = true; needsSave = true;
+            } else if (taskKey === 'midday') {
+                // Midday is a passive task (Mindful Walk), handled by generic completion but included here for completeness
+                isComplete = true;
+                needsSave = false;
+            }
+            
+            if (!isComplete) return; 
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                if (needsSave) {
+                    await updateDoc(userDocRef, { notes: updateNotes }); 
+                    userNotes = updateNotes; 
+                }
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true; 
+                const activeDayKey = getCurrentDayProgressKey(); 
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true; 
+                await updateDoc(userDocRef, updateProgressData);
+                
+                showCompletionToast('Task Complete', dayNumber, successMessage || `Great job, ${userName || 'Traveler'}! Step complete.`);
+                renderAccordion(); 
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                
+                window.scrollTo(0, scrollY); 
+            } catch (error) { console.error("Error saving notes:", error); showCompletionToast('Error', 0, 'Failed to save notes. Please try again.'); window.scrollTo(0, scrollY); }
+        }
+
+        window.saveDay6ReflectionNote = async function() {
+            const dayNumber = 6; const taskKey = 'evening_reflection'; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            const lettingGoNote = document.getElementById('day-6-lettinggo-note').value.trim();
+            if (!currentDayProgress.evening_reward) { showCompletionToast('Error', 0, 'Please complete the PMR task and claim its reward first.'); return; }
+            if (!lettingGoNote) { showCompletionToast('Error', 0, "Please write what you are letting go of."); return; }
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                const updateNotesData = { notes: { ...userNotes, day6_lettinggo: lettingGoNote } };
+                await updateDoc(userDocRef, updateNotesData); userNotes = updateNotesData.notes; 
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true; 
+                const activeDayKey = getCurrentDayProgressKey(); 
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true; 
+                await updateDoc(userDocRef, updateProgressData);
+                
+                showCompletionToast('Task Complete', dayNumber, `Reflection saved, ${userName || 'Traveler'}! Reward Unlocked.`);
+                renderAccordion(); 
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                
+                window.scrollTo(0, scrollY); 
+            } catch (error) { console.error("Error saving notes:", error); showCompletionToast('Error', 0, 'Failed to save notes. Please try again.'); window.scrollTo(0, scrollY); }
+        }
+        
+        window.saveDay7Notes = async function(taskKey) {
+            const dayNumber = 7; const phaseKey = 'task';
+            if (!isAuthReady || completedDay + 1 !== dayNumber) return;
+            let updateNotes = { ...userNotes }; let successMessage = ''; let isComplete = false; let needsSave = false;
+
+            // Day 7 Specific Validation and Data Extraction
+            if (taskKey === 'morning') {
+                const gratitude1 = document.getElementById('day-7-gratitude-1').value.trim(); const gratitude2 = document.getElementById('day-7-gratitude-2').value.trim(); const gratitude3 = document.getElementById('day-7-gratitude-3').value.trim();
+                if (!gratitude1 || !gratitude2 || !gratitude3) { showCompletionToast('Error', 0, 'Please list 3 things you are grateful for.'); return; }
+                Object.assign(updateNotes, { day7_gratitude1: gratitude1, day7_gratitude2: gratitude2, day7_gratitude3: gratitude3 });
+                successMessage = 'Gratitude notes saved! Morning Task Complete. Reward Unlocked.'; isComplete = true; needsSave = true;
+            } else if (taskKey === 'evening') {
+                const lesson1 = document.getElementById('day-7-lesson-1').value.trim(); const lesson2 = document.getElementById('day-7-lesson-2').value.trim(); const lesson3 = document.getElementById('day-7-lesson-3').value.trim(); const habit = document.getElementById('day-7-habit-note').value.trim();
+                if (!lesson1 || !lesson2 || !lesson3 || !habit) { showCompletionToast('Error', 0, 'Please list all 3 lessons and 1 habit to continue.'); return; }
+                Object.assign(updateNotes, { day7_lesson1: lesson1, day7_lesson2: lesson2, day7_lesson3: lesson3, day7_habit: habit });
+                successMessage = 'Weekly Review saved! Evening Task Complete. Reward Unlocked.'; isComplete = true; needsSave = true;
+            }
+
+            if (!isComplete) return; 
+            const userDocRef = getUserDocRef(); if (!userDocRef) return; const scrollY = window.scrollY;
+            try {
+                if (needsSave) {
+                    await updateDoc(userDocRef, { notes: updateNotes }); 
+                    userNotes = updateNotes; 
+                }
+                
+                currentDayProgress[taskKey + '_' + phaseKey] = true; 
+                const activeDayKey = getCurrentDayProgressKey(); 
+                let updateProgressData = {};
+                updateProgressData[`${activeDayKey}.${taskKey}_${phaseKey}`] = true; 
+                await updateDoc(userDocRef, updateProgressData);
+                
+                showCompletionToast('Task Complete', dayNumber, successMessage);
+                renderAccordion(); 
+                
+                const nextElementId = `day-${dayNumber}-${taskKey}-reward`; 
+                const nextElement = document.getElementById(nextElementId);
+                if (nextElement) { nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                
+                window.scrollTo(0, scrollY); 
+            } catch (error) { console.error("Error saving notes:", error); showCompletionToast('Error', 0, 'Failed to save notes. Please try again.'); window.scrollTo(0, scrollY); }
+        }
+
+        /**
+         * Marks a task or reward as complete (Generic Function for all other tasks).
+         */
+        window.markPhaseComplete = async function(dayNumber, taskKey, phaseKey) {
+            const activeDay = completedDay + 1;
+            const fullKey = `${taskKey}_${phaseKey}`;
+
+            // --- CRITICAL: Skip custom-save tasks handled by dedicated functions ---
+            // If it's a 'task' phase, check if it's one of the writing tasks (which have their own save functions)
+            if (phaseKey === 'task') {
+                if (dayNumber === 1 && taskKey === 'evening') return;
+                if (dayNumber === 2 && taskKey === 'evening') return;
+                if (dayNumber === 3) return; // All Day 3 tasks are custom saves
+                if (dayNumber === 4 && taskKey === 'evening') return;
+                if (dayNumber === 5 && (taskKey === 'morning' || taskKey === 'evening')) return; // Midday is handled generically
+                if (dayNumber === 6 && taskKey === 'evening_reflection') return;
+                if (dayNumber === 7 && (taskKey === 'morning' || taskKey === 'evening')) return;
+            }
+            // --- END CRITICAL FIX ---
+            
+            if (!isAuthReady || dayNumber !== activeDay || dayNumber > 7 || currentDayProgress[fullKey]) {
+                return; 
+            }
+
+            if (!userName) {
+                showCompletionToast('Error', 0, 'Please Register to start your journey.');
+                navigateTo('register');
+                return;
+            }
+
+            // --- Locking Check (Run again before saving for safety) ---
+            if (phaseKey === 'task') {
+                // Task-specific locking
+                if (dayNumber === 6 && taskKey === 'evening_reflection' && !currentDayProgress.evening_reward) return;
+                if (taskKey === 'midday' && !currentDayProgress.morning_reward) return;
+                const planToCheck = plans[dayNumber - 1];
+                if (taskKey === 'evening' && !currentDayProgress.midday_reward && !planHasOnlyEvening(planToCheck)) return;
+            }
+
+            if (phaseKey === 'reward') {
+                // Reward locking (must complete its preceding task)
+                if (!currentDayProgress[`${taskKey}_task`]) return;
+            }
+
+
+            const userDocRef = getUserDocRef();
+            if (!userDocRef) return;
+            
+            const scrollY = window.scrollY;
+
+            try {
+                // Update local state for immediate UI reflection
+                currentDayProgress[fullKey] = true;
+                const activeDayKey = getCurrentDayProgressKey();
+                let updateData = {};
+                updateData[`${activeDayKey}.${fullKey}`] = true;
+
+                let isDayComplete = false;
+
+                // Day Completion Logic
+                if (dayNumber === 6) {
+                    // Day 6 only has Evening (PMR task/reward) and Evening Reflection (task/reward)
+                    const isPMRTaskComplete = currentDayProgress.evening_task;
+                    const isPMRRewardComplete = currentDayProgress.evening_reward;
+                    const isReflectionTaskComplete = currentDayProgress.evening_reflection_task;
+                    const isReflectionRewardComplete = fullKey === 'evening_reflection_reward';
+                    
+                    if (isPMRTaskComplete && isPMRRewardComplete && isReflectionTaskComplete && isReflectionRewardComplete) {
+                        isDayComplete = true;
+                    }
+                } 
+                else if (fullKey.includes('reward')) {
+                    const planToCheck = plans[dayNumber - 1];
+                    
+                    // Check if the current reward completion completes the last reward block of the day
+                    const isLastReward = (taskKey === 'evening' || (!planToCheck.midday && taskKey === 'morning')) && planToCheck.evening !== undefined;
+                    
+                    if (isLastReward) {
+                        const morningComplete = !planToCheck.morning || currentDayProgress.morning_reward;
+                        const middayComplete = !planToCheck.midday || currentDayProgress.midday_reward;
+                        const eveningComplete = !planToCheck.evening || currentDayProgress.evening_reward;
+                        
+                        if (morningComplete && middayComplete && eveningComplete) {
+                            isDayComplete = true;
+                        }
+                    }
+                }
+                
+                if (isDayComplete) {
+                    updateData.completedDay = activeDay;
+                    completedDay = activeDay; 
+                    // Crucial: Initialize progress for the NEW active day (Day+1)
+                    if (activeDay < 7) {
+                        await initializeCurrentDayProgress(true); // Force load new day structure
+                    } else {
+                        currentDayProgress = {}; // Clear progress if journey is fully done
+                    }
+                    openDay = activeDay < 7 ? activeDay + 1 : activeDay;
+                }
+
+                await updateDoc(userDocRef, updateData);
+                
+                // Personalized Completion Toast
+                let toastMessage;
+                if (isDayComplete) {
+                    toastMessage = `🥳 Awesome, ${userName}! Day ${dayNumber} successfully completed! Get ready for the next day.`;
+                } else {
+                    toastMessage = `✅ Well done, ${userName}! This step is complete.`;
+                }
+                showCompletionToast(isDayComplete ? 'Day Complete' : 'Task Complete', dayNumber, toastMessage);
+
+                renderAccordion();
+                
+                // --- UPDATE: Immediately check and show completion status if Day 7 is finished ---
+                if (isDayComplete && activeDay === 7) {
+                    checkCompletionStatus();
+                    document.getElementById('completion-message').scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+                // --- END UPDATE ---
+                
+                window.scrollTo(0, scrollY); 
+                
+                // --- Auto-scroll to the next step logic (Only for intermediate steps) ---
+                if (!isDayComplete) {
+                    let nextElementId = null;
+                    
+                    if (dayNumber === 6) {
+                        // Day 6 specific flow
+                        if (taskKey === 'evening' && phaseKey === 'task') nextElementId = `day-6-evening-reward`;
+                        else if (taskKey === 'evening' && phaseKey === 'reward') nextElementId = `day-6-evening_reflection-task`;
+                        else if (taskKey === 'evening_reflection' && phaseKey === 'task') nextElementId = `day-6-evening_reflection-reward`;
+                        
+                    } else {
+                        // Standard flow
+                        const nextTaskKey = (phaseKey === 'task') ? `${taskKey}-reward` : getNextTaskKey(taskKey, phaseKey);
+                        
+                        if (nextTaskKey) {
+                            nextElementId = nextTaskKey.includes('reward') 
+                                ? `day-${dayNumber}-${taskKey}-reward` 
+                                : `day-${dayNumber}-${nextTaskKey.split('-')[0]}-task`; 
+                        }
+                    }
+
+                    const nextElement = document.getElementById(nextElementId);
+                    if (nextElement) {
+                         nextElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else if (isDayComplete && activeDay < 7) {
+                    // If day is complete and it's not the final day, scroll to the next day's header
+                    const nextDayHeader = document.getElementById(`day-header-${activeDay + 1}`);
+                    if (nextDayHeader) {
+                        nextDayHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+                // --- End Auto-scroll Logic ---
+
+            } catch (error) {
+                console.error("Error updating phase completion:", error);
+                window.scrollTo(0, scrollY); 
+            }
+        }
+
+        // Helper function for days with only specific tasks (like Day 6)
+        function planHasOnlyEvening(plan) {
+            return !plan.morning && !plan.midday && (!!plan.evening || !!plan.evening_reflection);
+        }
+
+        // Helper to determine the key of the next task block to scroll to
+        function getNextTaskKey(currentTaskKey, currentPhaseKey) {
+            if (currentPhaseKey === 'task') return `${currentTaskKey}-reward`;
+            if (currentPhaseKey === 'reward') {
+                if (currentTaskKey === 'morning') return 'midday-task';
+                if (currentTaskKey === 'midday') return 'evening-task';
+                if (currentTaskKey === 'evening') return null; 
+            }
+            return null;
+        }
+        
+        // --- Toast Message Helper ---
+        function showCompletionToast(type, dayNumber, customMessage = null) {
+            let message = '';
+            let bgColor = '';
+            
+            if (type === 'Task Complete' || type === 'Success') {
+                message = customMessage || `✅ Step Complete for Day ${dayNumber}! Next step unlocked.`;
+                bgColor = 'bg-teal-500';
+            } else if (type === 'Day Complete') {
+                message = customMessage || `🥳 Day ${dayNumber} Complete! You've unlocked the next day!`;
+                bgColor = 'bg-green-500';
+            } else if (type === 'Error') {
+                message = customMessage || `❌ An error occurred: Check console for details.`;
+                bgColor = 'bg-red-500';
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg text-white font-semibold shadow-xl transition-opacity duration-300 ${bgColor} z-50`;
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000); 
+        }
+
+        // --- UI Logic ---
+
+        window.navigateTo = function(page) {
+            currentPage = page;
+            homeView.classList.add('hidden');
+            journeyView.classList.add('hidden');
+            registerView.classList.add('hidden');
+
+            if (page === 'home') {
+                homeView.classList.remove('hidden');
+            } else if (page === 'register') {
+                registerView.classList.remove('hidden');
+            } else if (page === 'journey') {
+                const isCompleted = checkCompletionStatus();
+                
+                journeyView.classList.remove('hidden');
+                
+                // If not completed, open the correct day.
+                if (!isCompleted) {
+                    const nextDay = completedDay + 1 <= 7 ? completedDay + 1 : 7;
+                    toggleAccordion(nextDay, true); // Ensure the correct day is opened on view switch
+                }
+                window.scrollTo(0, 0); 
+            }
+        }
+
+        window.toggleAccordion = function(dayNumber, forceOpen = false) {
+            const content = document.getElementById(`day-content-${dayNumber}`);
+            const header = document.getElementById(`day-header-${dayNumber}`);
+            
+            if (!content || dayNumber > completedDay + 1) return; 
+
+            const isAlreadyOpen = content.classList.contains('open');
+
+            // Close all other open accordion items and update openDay tracker
+            document.querySelectorAll('.accordion-content.open').forEach(item => {
+                item.classList.remove('open');
+            });
+            openDay = 0;
+
+            if (isAlreadyOpen && !forceOpen) {
+                // If closing manually, do nothing
+            } else {
+                // Open the content and track it
+                content.classList.add('open');
+                openDay = dayNumber;
+                header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        
+        /**
+         * Generates the HTML for an activity block with locking logic.
+         */
+        function createActivityBlockHTML(activity, dayNumber, isCompleted) {
+            if (!activity) return '';
+
+            const taskKey = activity.taskKey; 
+            const isDayActive = dayNumber === completedDay + 1;
+            
+            // --- Determine locking/completion status ---
+            let isTaskLocked = false;
+            
+            if (isDayActive) {
+                if (dayNumber === 6) {
+                    if (taskKey === 'evening_reflection' && !currentDayProgress.evening_reward) isTaskLocked = true;
+                } else {
+                    if (taskKey === 'midday' && !currentDayProgress.morning_reward) isTaskLocked = true;
+                    // Lock evening task if midday reward is not done, unless it's a day with only an evening task (like Day 6, which is handled separately)
+                    if (taskKey === 'evening' && !currentDayProgress.midday_reward && !planHasOnlyEvening(plans[dayNumber - 1])) isTaskLocked = true;
+                }
+            }
+            
+            const isTaskDone = isCompleted || currentDayProgress[`${taskKey}_task`];
+            const isRewardDone = isCompleted || currentDayProgress[`${taskKey}_reward`];
+
+            // Only allow action if the day is active, the task isn't locked, and the phase isn't done.
+            const isTaskActionable = isDayActive && !isTaskLocked && !isTaskDone && !!userName;
+            let isRewardActionable = isDayActive && !isTaskLocked && isTaskDone && !isRewardDone && !!userName;
+
+            
+            // --- Task Block HTML ---
+            const taskFullId = `day-${dayNumber}-${taskKey}-task`;
+            const taskLockedClass = !isCompleted && isTaskLocked ? 'task-block-locked' : '';
+            const taskCompleteClass = isTaskDone ? 'bg-teal-200 border-teal-500' : 'bg-teal-50 border-teal-400';
+            
+            let specialTaskContent = '';
+            let buttonAction = `onclick="markPhaseComplete(${dayNumber}, '${taskKey}', 'task')"`; // Default action
+            let buttonText = 'Mark Task Complete';
+            
+            // Use generic name 'Traveler' if not registered, but prefer personalized name
+            const personalizedName = userName || 'Traveler';
+
+            // --- Personalized Task Descriptions ---
+            // Replace the "★ Notice:" tag with a personalized one
+            let personalizedDetails = activity.details.replace(
+                /★ Notice: (.*?)<br>/g, 
+                `★ Notice, <b>${personalizedName}</b>: $1<br>`
+            );
+            let personalizedRewardDetails = activity.rewardDetails.replace(
+                /<b>Reason:<\/b> (.*?)<br>/g, 
+                `<b>Reason for you, <b>${personalizedName}</b>:</b> $1<br>`
+            );
+
+            // --- CUSTOM INPUT FIELDS FOR WRITING TASKS (Requires Save/Update button logic) ---
+
+            if (dayNumber === 1 && taskKey === 'evening') {
+                specialTaskContent = `
+                    <div class="border-t pt-4 mt-4 space-y-3">
+                        <p class="text-sm font-semibold text-gray-800">1. Positive Thing to Note ✨</p>
+                        <textarea 
+                            id="day-1-positive-note" 
+                            rows="1" 
+                            placeholder="Write one positive thing that happened today, ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day1_positive || ''}</textarea>
+
+                        <p class="text-sm font-semibold text-gray-800">2. Thing to Release 🌬️</p>
+                        <textarea 
+                            id="day-1-release-note" 
+                            rows="1" 
+                            placeholder="Write one worry to release ('I release worry about...')..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day1_release || ''}</textarea>
+                    </div>
+                `;
+                buttonAction = `onclick="saveDay1EveningNotes()"`;
+                buttonText = '💾 Save Notes & Complete Task';
+
+            } 
+            else if (dayNumber === 2 && taskKey === 'evening') {
+                 specialTaskContent = `
+                    <div class="border-t pt-4 mt-4 space-y-3">
+                        <p class="text-sm font-semibold text-gray-800">1. Moment Focus Broke 💔</p>
+                        <textarea 
+                            id="day-2-broke-note" 
+                            rows="1" 
+                            placeholder="Write one moment your focus broke, ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day2_broke || ''}</textarea>
+
+                        <p class="text-sm font-semibold text-gray-800">2. What Helped Reset 💡</p>
+                        <textarea 
+                            id="day-2-reset-note" 
+                            rows="1" 
+                            placeholder="Write what helped you reset, ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day2_reset || ''}</textarea>
+                    </div>
+                `;
+                buttonAction = `onclick="saveDay2EveningNotes()"`;
+                buttonText = '💾 Save Notes & Complete Task';
+            
+            }
+            else if (dayNumber === 3) {
+                 // Day 3: All tasks are saving tasks
+                 buttonAction = `onclick="saveDay3Notes('${taskKey}')"`;
+                 buttonText = '💾 Save Notes & Complete Task';
+                
+                 if (taskKey === 'morning') {
+                    // Day 3 Morning: 3 Sensory Notes
+                    specialTaskContent = `
+                        <div class="border-t pt-4 mt-4 space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">• Sight 👁️</p>
+                            <input id="day-3-sight-note" type="text" placeholder="E.g., 'I see sunlight on the wall.', ${personalizedName}." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day3_sight || ''}" ${isTaskDone ? 'readonly' : ''} />
+                            <p class="text-sm font-semibold text-gray-800">• Sound 👂</p>
+                            <input id="day-3-sound-note" type="text" placeholder="E.g., 'I hear a bird chirping.', ${personalizedName}." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day3_sound || ''}" ${isTaskDone ? 'readonly' : ''} />
+                            <p class="text-sm font-semibold text-gray-800">• Touch 🖐️</p>
+                            <input id="day-3-touch-note" type="text" placeholder="E.g., 'I feel my chair under me.', ${personalizedName}." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day3_touch || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        </div>
+                    `;
+                } else if (taskKey === 'midday') {
+                    // Day 3 Midday: 1 Reframe Note
+                    specialTaskContent = `
+                        <div class="border-t pt-4 mt-4 space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">Your Reframe Line 💭</p>
+                            <textarea id="day-3-reframe-note" rows="1" placeholder="Write down: 'My progress is compared only to yesterday\'s me.', ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" ${isTaskDone ? 'readonly' : ''}>${userNotes.day3_reframe || ''}</textarea>
+                        </div>
+                    `;
+                } else if (taskKey === 'evening') {
+                    // Day 3 Evening: 3 Gratitude Notes
+                    specialTaskContent = `
+                        <div class="border-t pt-4 mt-4 space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">3 Things You Are Grateful For 🙏</p>
+                            <input id="day-3-gratitude-1" type="text" placeholder="1. Keep it small and simple, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day3_gratitude1 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                            <input id="day-3-gratitude-2" type="text" placeholder="2. Keep it small and simple, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day3_gratitude2 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                            <input id="day-3-gratitude-3" type="text" placeholder="3. Keep it small and simple, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day3_gratitude3 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        </div>
+                    `;
+                }
+            }
+            else if (dayNumber === 4 && taskKey === 'evening') {
+                 // Day 4 Evening: Two reflection inputs
+                 buttonAction = `onclick="saveDay4EveningNotes()"`;
+                 buttonText = '💾 Save Reflection & Complete Task';
+                 specialTaskContent = `
+                    <div class="border-t pt-4 mt-4 space-y-3">
+                        <p class="text-sm font-semibold text-gray-800">1. The boundary helped me feel... (Reflection) 🧘</p>
+                        <textarea 
+                            id="day-4-feeling-note" 
+                            rows="2" 
+                            placeholder="Write: 'The boundary helped me feel...' (e.g., in control, less rushed), ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day4_feeling || ''}</textarea>
+
+                        <p class="text-sm font-semibold text-gray-800">2. If you slipped, note it (No judgment) 👇</p>
+                        <textarea 
+                            id="day-4-slipped-note" 
+                            rows="2" 
+                            placeholder="Write if you slipped (e.g., 'I checked my phone once during dinner'), ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day4_slipped || ''}</textarea>
+                    </div>
+                `;
+            }
+            else if (dayNumber === 5 && (taskKey === 'morning' || taskKey === 'evening')) {
+                 // Day 5: Morning and Evening are writing tasks (Midday is passive, uses generic button)
+                 buttonAction = `onclick="saveDay5Notes('${taskKey}')"`;
+                 buttonText = '💾 Save Note & Complete Task';
+
+                if (taskKey === 'morning') {
+                    // Day 5 Morning: 1 Intention line
+                    specialTaskContent = `
+                        <div class="border-t pt-4 mt-4 space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">Your Daily Intention 💡</p>
+                            <textarea 
+                                id="day-5-intention-note" 
+                                rows="1" 
+                                placeholder="Say aloud or write: 'Today I will notice beauty around me.', ${personalizedName}..." 
+                                class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                                ${isTaskDone ? 'readonly' : ''}
+                            >${userNotes.day5_intention || ''}</textarea>
+                        </div>
+                    `;
+                } else if (taskKey === 'evening') {
+                    // Day 5 Evening: 1 Joy Note
+                    specialTaskContent = `
+                        <div class="border-t pt-4 mt-4 space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">Your Joy Note (One moment) 😊</p>
+                            <textarea 
+                                id="day-5-joy-note" 
+                                rows="2" 
+                                placeholder="Write one moment you enjoyed most today, ${personalizedName}..." 
+                                class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                                ${isTaskDone ? 'readonly' : ''}
+                            >${userNotes.day5_joy || ''}</textarea>
+                        </div>
+                    `;
+                }
+            }
+            else if (dayNumber === 6 && taskKey === 'evening_reflection') {
+                // Day 6 Reflection: 1 Letting Go Note (Requires PMR reward to be complete)
+                 buttonAction = `onclick="saveDay6ReflectionNote()"`;
+                 buttonText = '💾 Save Reflection & Complete Task';
+                 
+                specialTaskContent = `
+                    <div class="border-t pt-4 mt-4 space-y-3">
+                        <p class="text-sm font-semibold text-gray-800">What are you letting go of today? ⬇️</p>
+                        <textarea 
+                            id="day-6-lettinggo-note" 
+                            rows="2" 
+                            placeholder="Write: 'Today I am letting go of [worry/anger/regret].', ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day6_lettinggo || ''}</textarea>
+                    </div>
+                `;
+            }
+             else if (dayNumber === 7 && taskKey === 'morning') {
+                 // Day 7 Morning: 3 Gratitude Notes 
+                 buttonAction = `onclick="saveDay7Notes('${taskKey}')"`;
+                 buttonText = '💾 Save Gratitudes & Complete Task';
+                 
+                specialTaskContent = `
+                    <div class="border-t pt-4 mt-4 space-y-3">
+                        <p class="text-sm font-semibold text-gray-800">3 Things You Are Grateful For 🙏</p>
+                        <input id="day-7-gratitude-1" type="text" placeholder="1. Keep it small and simple, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day7_gratitude1 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        <input id="day-7-gratitude-2" type="text" placeholder="2. Keep it small and simple, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day7_gratitude2 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        <input id="day-7-gratitude-3" type="text" placeholder="3. Keep it small and simple, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day7_gratitude3 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                    </div>
+                `;
+            } else if (dayNumber === 7 && taskKey === 'evening') {
+                 // Day 7 Evening: Weekly Review (3 Lessons, 1 Habit)
+                 buttonAction = `onclick="saveDay7Notes('${taskKey}')"`;
+                 buttonText = '💾 Save Weekly Review & Complete Task';
+                 
+                specialTaskContent = `
+                    <div class="border-t pt-4 mt-4 space-y-3">
+                        <p class="text-sm font-semibold text-gray-800">3 Lessons Learned This Week 🧠</p>
+                        <input id="day-7-lesson-1" type="text" placeholder="1. E.g., Slow breathing works instantly, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day7_lesson1 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        <input id="day-7-lesson-2" type="text" placeholder="2. E.g., Boundaries protect my energy, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day7_lesson2 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        <input id="day-7-lesson-3" type="text" placeholder="3. E.g., I sleep better after journaling, ${personalizedName}..." class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500" value="${userNotes.day7_lesson3 || ''}" ${isTaskDone ? 'readonly' : ''} />
+                        
+                        <p class="text-sm font-semibold text-gray-800 mt-5">1 Habit to Continue (Long-Term Practice) 💪</p>
+                        <textarea 
+                            id="day-7-habit-note" 
+                            rows="2" 
+                            placeholder="Write the one habit you commit to continuing, ${personalizedName}..." 
+                            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                            ${isTaskDone ? 'readonly' : ''}
+                        >${userNotes.day7_habit || ''}</textarea>
+                    </div>
+                `;
+            }
+            // --- END CUSTOM INPUT FIELDS ---
+
+            const taskHtml = `
+                <div id="${taskFullId}" class="relative-task p-4 rounded-lg shadow-sm border-l-4 ${taskCompleteClass} ${taskLockedClass}">
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-semibold text-teal-800 flex items-center">
+                            <span class="mr-2 text-2xl">${activity.icon || '🛠️'}</span>
+                            ${activity.title}
+                        </h4>
+                        <p class="text-gray-700 text-sm">${personalizedDetails}</p>
+                        
+                        ${specialTaskContent}
+                        
+                        ${isTaskDone ? `
+                            <div class="w-full md:w-auto text-center font-bold py-2 px-4 rounded-lg text-white status-completed">
+                                ✅ Task Complete
+                            </div>
+                        ` : `
+                            <button 
+                                class="completion-button w-full md:w-auto flex items-center justify-center text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ${isTaskActionable ? 'bg-teal-600 hover:bg-teal-700' : 'bg-gray-400'}"
+                                ${!isTaskActionable ? 'disabled' : buttonAction}
+                            >
+                                ${buttonText}
+                            </button>
+                        `}
+                         ${!userName && !isCompleted ? `<p class="text-red-500 text-sm mt-2">Please <a href="#" onclick="navigateTo('register')" class="underline font-semibold">Register</a> to proceed and personalize your journey.</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // --- Reward Block HTML ---
+            const rewardFullId = `day-${dayNumber}-${taskKey}-reward`;
+            // Reward is locked if the task is not done, or if the overall task block is locked (which means its preceding reward isn't done).
+            const isRewardBlockLocked = isTaskLocked || (isDayActive && !isTaskDone); 
+            const rewardLockedClass = !isCompleted && isRewardBlockLocked ? 'task-block-locked' : '';
+            const rewardCompleteClass = isRewardDone ? 'bg-green-200 border-green-500' : 'bg-green-50 border-green-400';
+            
+            let rewardButtonAction = `onclick="markPhaseComplete(${dayNumber}, '${taskKey}', 'reward')"`;
+
+            const rewardHtml = `
+                <div id="${rewardFullId}" class="relative-task p-4 rounded-lg shadow-sm border-l-4 ${rewardCompleteClass} ${rewardLockedClass}">
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-semibold text-green-800 flex items-center">
+                            <span class="mr-2 text-2xl">🎁</span>
+                            Your Reward
+                        </h4>
+                        <p class="text-gray-700 text-sm">${personalizedRewardDetails}</p>
+                        
+                        ${isRewardDone ? `
+                            <div class="w-full md:w-auto text-center font-bold py-2 px-4 rounded-lg text-white status-completed">
+                                ✅ Reward Claimed
+                            </div>
+                        ` : `
+                            <button 
+                                class="completion-button w-full md:w-auto flex items-center justify-center text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ${isRewardActionable ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400'}"
+                                ${!isRewardActionable ? 'disabled' : rewardButtonAction}
+                            >
+                                Claim Reward & Continue
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `;
+
+
+            return `
+                <div class="space-y-3">
+                    ${taskHtml}
+                    ${rewardHtml}
+                </div>
+            `;
+        }
+
+
+        function renderAccordion() {
+            const scrollY = window.scrollY;
+            const openDayBeforeRender = openDay;
+
+            accordionContainer.innerHTML = ''; 
+            openDay = 0; 
+
+            plans.forEach(plan => {
+                const dayNumber = plan.day;
+                const isCompleted = dayNumber <= completedDay;
+                const isNext = dayNumber === completedDay + 1;
+                const isLocked = dayNumber > completedDay + 1;
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'rounded-lg shadow-md overflow-hidden border border-gray-200';
+
+                // --- Header (Clickable part) ---
+                const header = document.createElement('div');
+                header.id = `day-header-${dayNumber}`;
+                header.className = `accordion-header flex justify-between items-center p-4 md:p-6 font-bold text-lg transition duration-200 
+                                    ${isLocked ? 'locked text-gray-500' : isCompleted ? 'bg-teal-100 text-teal-800' : 'bg-teal-50 text-teal-700'}`;
+                
+                if (!isLocked) {
+                    header.onclick = () => toggleAccordion(dayNumber);
+                }
+
+                let headerIcon = isCompleted ? '✅' : isLocked ? '🔒' : isNext ? '🔥' : '👉';
+                let personalizedIntro = plan.intro;
+
+                header.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-xl mr-4">${headerIcon}</span>
+                        Day ${dayNumber}: ${plan.title}
+                        <span class="ml-4 text-sm font-normal text-gray-500 hidden sm:inline">${personalizedIntro}</span>
+                    </div>
+                    <svg class="w-5 h-5 transition-transform transform ${openDay === dayNumber ? 'rotate-180' : ''} ${isLocked ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                `;
+                dayElement.appendChild(header);
+
+                // --- Content (Hidden part) ---
+                const content = document.createElement('div');
+                content.id = `day-content-${dayNumber}`;
+                content.className = 'accordion-content bg-white';
+                
+                let activitiesHtml = '';
+                if (plan.morning) activitiesHtml += createActivityBlockHTML(plan.morning, dayNumber, isCompleted);
+                if (plan.midday) activitiesHtml += createActivityBlockHTML(plan.midday, dayNumber, isCompleted);
+                if (plan.evening) activitiesHtml += createActivityBlockHTML(plan.evening, dayNumber, isCompleted);
+                if (dayNumber === 6 && plan.evening_reflection) activitiesHtml += createActivityBlockHTML(plan.evening_reflection, dayNumber, isCompleted);
+
+
+                let contentBody = `<div class="p-6 space-y-6">${activitiesHtml}</div>`;
+                
+                // Add Day Completion Status
+                if (isCompleted) {
+                    contentBody += `<div class="p-6 pt-0 text-center text-teal-600 font-semibold">🌟 Congratulations, ${userName || 'Traveler'}! You successfully completed this day!</div>`;
+                }
+
+                content.innerHTML = contentBody;
+                dayElement.appendChild(content);
+
+                // Re-open the previously open day, or the current active day
+                if (dayNumber === openDayBeforeRender || (dayNumber === completedDay + 1 && openDayBeforeRender === 0)) {
+                    content.classList.add('open');
+                    openDay = dayNumber;
+                }
+
+                accordionContainer.appendChild(dayElement);
+            });
+            
+            window.scrollTo(0, scrollY);
+        }
+
+        // --- Initialization ---
+        window.onload = initializeFirebase;
+    </script>
+</body>
+</html>
+
